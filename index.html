@@ -14,40 +14,46 @@
     <script
         src="https://cdn.jsdelivr.net/npm/aframe-gesture-detector@3.3.0/dist/aframe-gesture-detector.min.js"></script>
 
-    <!-- Custom gesture handler -->
+    <!-- Custom gesture-handler -->
     <script>
         AFRAME.registerComponent("gesture-handler", {
             schema: { enabled: { default: true } },
             init: function () {
                 const el = this.el;
-                let initialScale = new THREE.Vector3();
-                el.sceneEl.addEventListener("loaded", () => {
-                    initialScale.copy(el.object3D.scale);
+                this.initialScale = el.object3D.scale.clone();
+                this.handleOneFingerMove = this.handleOneFingerMove.bind(this);
+                this.handleTwoFingerMove = this.handleTwoFingerMove.bind(this);
+                this.handleTouchEnd = this.handleTouchEnd.bind(this);
+                el.addEventListener("onefingermove", this.handleOneFingerMove);
+                el.addEventListener("twofingermove", this.handleTwoFingerMove);
+                el.addEventListener("touchend", this.handleTouchEnd);
+            },
+            remove: function () {
+                this.el.removeEventListener("onefingermove", this.handleOneFingerMove);
+                this.el.removeEventListener("twofingermove", this.handleTwoFingerMove);
+                this.el.removeEventListener("touchend", this.handleTouchEnd);
+            },
+            handleOneFingerMove: function (event) {
+                if (!this.data.enabled) return;
+                const rotation = this.el.getAttribute("rotation");
+                this.el.setAttribute("rotation", {
+                    x: rotation.x,
+                    y: rotation.y - event.detail.positionChange.x * 0.5,
+                    z: rotation.z
                 });
-
-                el.sceneEl.addEventListener("onefingermove", (event) => {
-                    if (!this.data.enabled) return;
-                    const rotation = el.getAttribute("rotation");
-                    el.setAttribute("rotation", {
-                        x: rotation.x,
-                        y: rotation.y - event.detail.positionChange.x * 0.5,
-                        z: rotation.z
-                    });
-                });
-
-                el.sceneEl.addEventListener("twofingermove", (event) => {
-                    if (!this.data.enabled) return;
-                    const scaleFactor = event.detail.spreadChange / 200;
-                    el.object3D.scale.set(
-                        initialScale.x + scaleFactor,
-                        initialScale.y + scaleFactor,
-                        initialScale.z + scaleFactor
-                    );
-                });
-
-                el.sceneEl.addEventListener("touchend", () => {
-                    initialScale.copy(el.object3D.scale);
-                });
+            },
+            handleTwoFingerMove: function (event) {
+                if (!this.data.enabled) return;
+                const scaleFactor = event.detail.spreadChange / 200;
+                const newScale = this.initialScale.clone().addScalar(scaleFactor);
+                this.el.object3D.scale.set(
+                    Math.max(0.1, newScale.x),
+                    Math.max(0.1, newScale.y),
+                    Math.max(0.1, newScale.z)
+                );
+            },
+            handleTouchEnd: function () {
+                this.initialScale.copy(this.el.object3D.scale);
             }
         });
     </script>
@@ -93,7 +99,8 @@
     </div>
 
     <a-scene mindar-image="imageTargetSrc: targets.mind; autoStart: true" vr-mode-ui="enabled: false"
-        device-orientation-permission-ui="enabled: true" gesture-detector loading-screen="enabled: false">
+        device-orientation-permission-ui="enabled: true" loading-screen="enabled: false" gesture-detector>
+
         <!-- Assets -->
         <a-assets>
             <a-asset-item id="tralalaModel" src="assets/tralala.glb"></a-asset-item>
@@ -102,14 +109,14 @@
 
         <!-- Target 0: tralala -->
         <a-entity mindar-image-target="targetIndex: 0">
-            <a-entity position="0 0 0" rotation="0 0 0" scale="0.75 0.75 0.5" gesture-detector gesture-handler>
+            <a-entity position="0 0 0" rotation="0 0 0" scale="0.75 0.75 0.5" gesture-handler>
                 <a-gltf-model src="#tralalaModel"></a-gltf-model>
             </a-entity>
         </a-entity>
 
         <!-- Target 1: sahur -->
         <a-entity mindar-image-target="targetIndex: 1">
-            <a-entity position="0 -0.2 0" rotation="0 0 0" scale="0.16 0.16 0.16" gesture-detector gesture-handler>
+            <a-entity position="0 -0.2 0" rotation="0 0 0" scale="0.16 0.16 0.16" gesture-handler>
                 <a-gltf-model src="#sahurModel"></a-gltf-model>
             </a-entity>
         </a-entity>
