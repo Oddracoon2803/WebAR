@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Scan Here to See The 3D Model</title>
+
+    <!-- MindAR & A-Frame -->
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image.prod.js"></script>
+    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+    <!-- Gesture support -->
+    <script
+        src="https://cdn.jsdelivr.net/npm/aframe-gesture-detector@3.3.0/dist/aframe-gesture-detector.min.js"></script>
+
+    <!-- Custom gesture handler -->
+    <script>
+        AFRAME.registerComponent("gesture-handler", {
+            schema: { enabled: { default: true } },
+            init: function () {
+                const el = this.el;
+                let initialScale = new THREE.Vector3();
+                el.sceneEl.addEventListener("loaded", () => {
+                    initialScale.copy(el.object3D.scale);
+                });
+
+                el.sceneEl.addEventListener("onefingermove", (event) => {
+                    if (!this.data.enabled) return;
+                    const rotation = el.getAttribute("rotation");
+                    el.setAttribute("rotation", {
+                        x: rotation.x,
+                        y: rotation.y - event.detail.positionChange.x * 0.5,
+                        z: rotation.z
+                    });
+                });
+
+                el.sceneEl.addEventListener("twofingermove", (event) => {
+                    if (!this.data.enabled) return;
+                    const scaleFactor = event.detail.spreadChange / 200;
+                    el.object3D.scale.set(
+                        initialScale.x + scaleFactor,
+                        initialScale.y + scaleFactor,
+                        initialScale.z + scaleFactor
+                    );
+                });
+
+                el.sceneEl.addEventListener("touchend", () => {
+                    initialScale.copy(el.object3D.scale);
+                });
+            }
+        });
+    </script>
+
+    <!-- Styling -->
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: sans-serif;
+        }
+
+        #loading-screen {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: #111;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2em;
+            z-index: 10;
+            flex-direction: column;
+        }
+
+        a-scene {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="loading-screen">
+        <p>🔍 Sedang memuat AR...</p>
+        <p style="font-size: 0.9em; color: #aaa;">Arahkan kamera ke gambar target</p>
+    </div>
+
+    <a-scene mindar-image="imageTargetSrc: targets.mind; autoStart: true" vr-mode-ui="enabled: false"
+        device-orientation-permission-ui="enabled: true" gesture-detector loading-screen="enabled: false">
+        <!-- Assets -->
+        <a-assets>
+            <a-asset-item id="tralalaModel" src="assets/tralala.glb"></a-asset-item>
+            <a-asset-item id="sahurModel" src="assets/sahur.glb"></a-asset-item>
+        </a-assets>
+
+        <!-- Target 0: tralala -->
+        <a-entity mindar-image-target="targetIndex: 0">
+            <a-entity position="0 0 0" rotation="0 0 0" scale="0.75 0.75 0.5" gesture-detector gesture-handler>
+                <a-gltf-model src="#tralalaModel"></a-gltf-model>
+            </a-entity>
+        </a-entity>
+
+        <!-- Target 1: sahur -->
+        <a-entity mindar-image-target="targetIndex: 1">
+            <a-entity position="0 -0.2 0" rotation="0 0 0" scale="0.16 0.16 0.16" gesture-detector gesture-handler>
+                <a-gltf-model src="#sahurModel"></a-gltf-model>
+            </a-entity>
+        </a-entity>
+
+        <!-- Camera -->
+        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+    </a-scene>
+
+    <!-- Remove loading screen when scene loaded -->
+    <script>
+        window.addEventListener("DOMContentLoaded", () => {
+            const scene = document.querySelector("a-scene");
+            scene.addEventListener("loaded", () => {
+                document.getElementById("loading-screen").style.display = "none";
+            });
+        });
+    </script>
+</body>
+
+</html>
